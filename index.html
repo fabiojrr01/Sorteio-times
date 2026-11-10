@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Sorteio de Times</title>
+<style>
+:root{--bg:#eef1f5;--card:#fff;--tx:#14213d;--mut:#667089;--bd:#d9dee8;--ac:#14213d;--act:#fff;--dg:#c0392b;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){color-scheme:dark;--bg:#0f1524;--card:#18203a;--tx:#eaeefb;--mut:#9aa5c4;--bd:#2a3556;--ac:#f2c14e;--act:#14213d;--dg:#ff7a6b}}
+:root[data-theme="dark"]{color-scheme:dark;--bg:#0f1524;--card:#18203a;--tx:#eaeefb;--mut:#9aa5c4;--bd:#2a3556;--ac:#f2c14e;--act:#14213d;--dg:#ff7a6b}
+*{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px/1.4 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+main{max-width:560px;margin:0 auto;padding:16px 14px 32px}
+h1{font-size:26px;font-weight:900;letter-spacing:-.02em;margin:4px 0 14px}
+h2{font-size:17px;margin:0 0 10px}
+.tabs{display:flex;gap:4px;margin-bottom:14px}
+.tab{flex:1;padding:12px 2px;font-size:13px;border:2px solid var(--bd);background:var(--card);color:var(--tx);border-radius:12px;font-family:inherit;font-weight:700}
+.tab.on{background:var(--ac);color:var(--act);border-color:var(--ac)}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:14px}
+input,select{width:100%;padding:12px;margin:0 0 8px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font:inherit}
+input[type=checkbox]{width:24px;height:24px;margin:0;accent-color:var(--tx)}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.btn{width:100%;padding:13px;border:0;border-radius:12px;background:var(--ac);color:var(--act);font:inherit;font-weight:800;margin-top:2px}
+.btn.ghost{background:transparent;color:var(--tx);border:1px solid var(--bd);margin-top:8px}
+.item{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--bd)}
+.item small{display:block;color:var(--mut)}
+.ico{border:0;background:transparent;font-size:20px;padding:6px 8px;color:var(--tx)}
+.mut{color:var(--mut)}
+.bar{display:flex;gap:8px;margin:6px 0}.bar button{flex:1;padding:9px;border-radius:10px;border:1px solid var(--bd);background:transparent;color:var(--tx);font:inherit}
+.bar button.fon{background:#f2c14e;color:#14213d;border-color:#f2c14e;font-weight:800}
+.team{border-radius:14px;margin-bottom:12px;overflow:hidden;border:1px solid var(--bd);background:var(--card)}
+.team header{display:flex;justify-content:space-between;align-items:baseline;padding:10px 14px;color:#14213d;font-weight:900}
+.team header span{font-weight:600;font-size:13px}
+.team .pl{display:flex;justify-content:space-between;padding:8px 14px;border-top:1px solid var(--bd)}
+.team .pl small{color:var(--mut)}
+.ad{margin-top:18px;min-height:90px;border:2px dashed var(--bd);border-radius:12px;display:flex;align-items:center;justify-content:center;color:var(--mut);font-size:13px;text-align:center;padding:8px}
+#ps,#gp{background:#f2c14e;color:#14213d;font-weight:700;border-color:#f2c14e}#ps option,#gp option{background:#fff;color:#14213d}
+.gh{margin:14px 0 6px;padding:6px 10px;border-radius:8px;background:#f2c14e;color:#14213d;font-size:14px;font-weight:800}
+.chip{display:inline-block;padding:1px 8px;border-radius:8px;font-size:12px;font-weight:800;color:#14213d;margin-right:6px}.ok{font-weight:700;margin:8px 0 0}
+.banner{border:0;background:#14213d;color:#fff;justify-content:flex-start;gap:14px;padding:18px;text-align:left}.banner b{display:block;font-size:32px;font-weight:900;letter-spacing:.05em;line-height:1}.banner span{color:#f2c14e;font-weight:700;letter-spacing:.22em;font-size:13px;text-transform:uppercase}.banner i{width:6px;align-self:stretch;background:#f2c14e;border-radius:3px}
+.msg{color:var(--dg);margin:8px 0 0;font-weight:600}
+</style></head><body><main>
+<h1>⚽ Sorteio de Times</h1>
+<div class="tabs"><button class="tab" data-t="j" onclick="go('j')">Jogadores</button><button class="tab" data-t="s" onclick="go('s')">Sorteio</button><button class="tab" data-t="t" onclick="go('t')">Substit.</button><button class="tab" data-t="a" onclick="go('a')">Admin</button></div>
+<div id="app"></div>
+<div class="ad banner" id="ad-slot"><i></i><div><b>ANSEF</b><span>Paraíba</span></div></div>
+</main>
+<script>
+window.addEventListener("unhandledrejection",e=>{msg="Erro inesperado: "+((e.reason&&e.reason.message)||e.reason);try{render()}catch(x){}});
+window.addEventListener("error",e=>{msg="Erro inesperado: "+e.message;try{render()}catch(x){}});
+const TIPOS={misto:["50+","40+"],so50:["50+"],so40:["40+"],livre:[]};
+const TNOMES={misto:"50+ e 40+ (50+ tem prioridade)",so50:"Só 50+",so40:"Só 40+",livre:"Livre (sem regra de idade)"};
+const MODELOS={Futebol:[["Goleiro",1,1],["Defesa",0,0],["Meio",0,0],["Ataque",0,0]],"Vôlei":[["Levantador",0,0],["Ponta",0,0],["Oposto",0,0],["Central",0,0],["Líbero",1,0]],Basquete:[["Armador",0,0],["Ala",0,0],["Pivô",0,0]]};
+const mk=a=>a.map(([n,max,ex])=>({n,max,ex:!!ex}));
+const COLORS=["#f4a259","#6cb8f0","#f2d64e","#f08bb4","#8fd694","#b79af0","#f08a7a","#7fd6d0"];
+const $=s=>document.querySelector(s);
+let DB=null,ADM=false,synced=false,cfg={tipo:"misto",pos:mk(MODELOS.Futebol)},players=[],present=new Set(),guests=[],tab="j",editId=null,qt={times:2,jog:5},result=null,err="",arr={},seqC=0,subIn="",subOut=new Set(),sug=null,note="",flt="todos",msg="",draft=null,pend=null,okMsg="",delAsk=null,askNew=false;
+const LS=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem(k));localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const uid=()=>"p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+const groups=()=>TIPOS[cfg.tipo]||[];
+const lastG=()=>{const g=groups();return g[g.length-1]||""};
+const P=n=>cfg.pos.find(p=>p.n===n)||{max:0,ex:false};
+const exN=n=>P(n).ex,maxP=n=>P(n).max;
+const noAge=x=>exN(x.pos)||!groups().length;
+const pr=x=>noAge(x)?0:Math.max(0,groups().indexOf(x.grp||lastG()));
+const gl=x=>noAge(x)?"":" · "+(x.grp||lastG());
+const cmp=(a,b)=>pr(a)-pr(b)||(arr[a.id]||0)-(arr[b.id]||0);
+const posOpts=s=>cfg.pos.map(p=>`<option ${p.n==s?"selected":""}>${esc(p.n)}</option>`).join("");
+const grpOpts=s=>groups().map(g=>`<option ${g==(s||lastG())?"selected":""}>${g}</option>`).join("");
+const lvlOpts=s=>[1,2,3,4,5].map(n=>`<option value="${n}" ${n==s?"selected":""}>Nível ${n}</option>`).join("");
+const defPos=()=>(cfg.pos[1]||cfg.pos[0]||{n:""}).n;
+const ixP=n=>{const i=cfg.pos.findIndex(p=>p.n===n);return i<0?99:i};
+const exLabel=()=>cfg.pos.some(p=>p.ex&&p.n==="Goleiro")?"GK":"Sem idade";
+let wq=Promise.resolve(),wn=0;
+const cl=o=>JSON.parse(JSON.stringify(o));
+function persist(w){
+  if(!DB){LS(w==="c"?"config":"jogadores",w==="c"?cfg:players);return Promise.resolve()}
+  wn++;
+  wq=wq.then(async()=>{try{if(w==="c")await DB.doc("app/config").set(cl(cfg));else await DB.doc("app/players").set({list:cl(players)})}catch(e){err="Não foi possível salvar. Só administradores alteram os dados."}finally{wn--}});
+  return wq;
+}
+(async()=>{
+  try{DB=await claude.use("db");if(DB){const u=await claude.use("user");ADM=u?await u.canEdit():false;
+    const t=setTimeout(()=>{if(!synced){msg="Sem conexão com os dados compartilhados.";render()}},10000);
+    DB.doc("app/config").onSnapshot(s=>{if(s.exists&&!wn)cfg=Object.assign({tipo:"misto",pos:cfg.pos},cl(s.data()));synced=true;clearTimeout(t);msg="";render()},()=>{});
+    DB.doc("app/players").onSnapshot(s=>{if(!wn)players=s.exists?cl(s.data().list||[]):[];synced=true;clearTimeout(t);msg="";render()},()=>{});
+  }}catch(e){DB=null}
+  if(!DB){const c=LS("config");if(c&&c.pos)cfg=c;players=LS("jogadores")||[];ADM=true;synced=true}
+  render();
+})();
+function go(t){tab=t;err="";msg="";okMsg="";askNew=false;pend=null;draft=null;delAsk=null;render()}
+function render(){
+  const v={j:viewJ,s:viewS,t:viewT,a:viewA}[tab];
+  $("#app").innerHTML=(msg?`<p class="msg">${msg}</p>`:"")+v();
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.t===tab));
+}
+function togG(sel,pos){const e=$(sel);if(e)e.style.display=(exN(pos)||!groups().length)?"none":""}
+function viewJ(){
+  const e=(editId&&players.find(p=>p.id===editId))||draft||{name:"",pos:defPos(),lvl:3};
+  const sorted=[...players].sort((a,b)=>a.name.localeCompare(b.name));
+  const names=[...cfg.pos.map(p=>p.n),...new Set(players.map(p=>p.pos).filter(n=>!cfg.pos.some(c=>c.n===n)))];
+  const imp=ADM&&DB&&!players.length&&(LS("jogadores")||[]).length;
+  const form=ADM?`<section class="card"><h2>${editId?"Editar jogador":"Novo jogador"}</h2>
+  <input id="nm" placeholder="Nome" maxlength="30" value="${esc(e.name)}">
+  <div class="row"><select id="ps" onchange="togG('#gr',this.value)">${posOpts(e.pos)}</select><select id="lv">${lvlOpts(e.lvl)}</select></div>
+  ${groups().length?`<select id="gr" style="${noAge(e)?"display:none":""}">${grpOpts(e.grp)}</select>`:""}
+  <p class="mut" style="margin:0 0 8px;font-size:13px">Nível 1 = pouca habilidade, nível 5 = muita habilidade.</p>
+  ${pend?`<div class="msg" style="margin:0 0 10px">Já existe ${esc(pend.dup.name)} (${esc(pend.dup.pos)}, nível ${pend.dup.lvl}${gl(pend.dup)}) ${pend.same?"com o mesmo cadastro":"com dados diferentes"}. Deseja cadastrar mesmo assim como ${esc(pend.nome)}?</div><button class="btn" onclick="dupSim()">Sim, cadastrar como ${esc(pend.nome)}</button><button class="btn ghost" onclick="pend=null;render()">Não, voltar</button>`:`<button class="btn" onclick="salvarJ()">${editId?"Salvar alterações":"Adicionar jogador"}</button>`}
+  ${editId?`<button class="btn ghost" onclick="editId=null;render()">Cancelar</button>`:""}
+  ${err?`<p class="msg">${err}</p>`:""}${okMsg?`<p class="ok" style="color:#1f9d55">${esc(okMsg)}</p>`:""}</section>`:`<section class="card"><p class="mut">Somente administradores editam o cadastro.</p></section>`;
+  return form+`<section class="card"><h2>Jogadores cadastrados (${players.length})</h2>
+  ${imp?`<button class="btn ghost" onclick="importar()">Importar ${LS("jogadores").length} jogadores deste aparelho</button>`:""}
+  ${sorted.length?names.map(pos=>{const g=sorted.filter(p=>p.pos===pos);return g.length?`<h3 class="gh">${esc(pos)} (${g.length})</h3>`+g.map(p=>`<div class="item"><div><b>${esc(p.name)}</b><small>Nível ${p.lvl}${gl(p)}</small></div>${ADM?(delAsk===p.id?`<div><button class="ico" style="font-size:14px;font-weight:800;color:var(--dg)" onclick="delJ('${p.id}')">Sim, excluir</button><button class="ico" style="font-size:14px" onclick="delAsk=null;render()">Não</button></div>`:`<div><button class="ico" onclick="editJ('${p.id}')" aria-label="Editar">✎</button><button class="ico" onclick="delAsk='${p.id}';render()" aria-label="Excluir">🗑</button></div>`):""}</div>`).join(""):""}).join(""):`<p class="mut">${synced?"Nenhum jogador ainda.":"Carregando..."}</p>`}</section>`;
+}
+async function salvarJ(ovr){
+  const name=$("#nm").value.trim();
+  if(!name){err="Digite o nome do jogador.";return render()}
+  const pos=$("#ps").value,d={name,pos,lvl:+$("#lv").value,grp:(exN(pos)||!groups().length)?"":$("#gr").value};
+  if(editId){Object.assign(players.find(p=>p.id===editId),d);editId=null;okMsg=name+" atualizado."}else{const dup=players.find(p=>norm(p.name)===norm(name));if(dup&&!ovr){draft=d;pend={dup,same:dup.pos===d.pos&&dup.lvl===d.lvl&&(dup.grp||"")===(d.grp||""),nome:nextName(name)};err="";return render()}const fn=ovr?nextName(name):name;players.push({id:uid(),...d,name:fn});okMsg=fn+" cadastrado.";draft=null;pend=null}
+  err="";await persist("p");render();
+}
+const norm=s=>String(s).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase().replace(/\s+/g," ").trim();
+const nextName=b=>{let i=1;while(players.some(p=>norm(p.name)===norm(b+i)))i++;return b+i};
+function dupSim(){salvarJ(true)}
+function editJ(id){editId=id;err="";draft=null;pend=null;okMsg="";render();window.scrollTo({top:0,behavior:"smooth"})}
+async function delJ(id){const n=(players.find(p=>p.id===id)||{}).name;delAsk=null;okMsg=n?n+" foi excluído.":"";players=players.filter(p=>p.id!==id);present.delete(id);delete arr[id];await persist("p");render()}
+async function importar(){players=LS("jogadores")||[];await persist("p");render()}
+const visP=()=>players.filter(p=>flt==="todos"||(flt==="EX"?exN(p.pos):!exN(p.pos)&&(p.grp||lastG())===flt)).sort((a,b)=>a.name.localeCompare(b.name));
+function viewS(){
+  if(flt!=="todos"&&flt!=="EX"&&!groups().includes(flt))flt="todos";
+  const fl=[["todos","Todos"],...groups().map(g=>[g,g]),...(cfg.pos.some(p=>p.ex)?[["EX",exLabel()]]:[])];
+  return `<section class="card"><h2>Quem veio hoje? <span class="mut" id="cnt"></span></h2>
+  <div class="bar">${fl.map(([f,l])=>`<button class="${flt===f?"fon":""}" onclick="flt='${f}';render()">${l}</button>`).join("")}</div>
+  ${cfg.pos.some(p=>p.ex)?`<p class="mut" style="margin:0;font-size:13px">Posições sem regra de idade aparecem só em Todos e em ${exLabel()}.</p>`:""}
+  <div class="bar"><button onclick="all_(1)">Marcar todos</button><button onclick="all_(0)">Limpar</button></div>
+  <button class="btn ghost" style="margin:0 0 6px" onclick="askNew?novoDia():(askNew=true,render())">${askNew?"Toque de novo para limpar tudo":"Novo dia (limpar presenças, convidados e sorteio)"}</button>
+  ${visP().length?visP().map(p=>`<label class="item"><span><b>${esc(p.name)}</b><small>${esc(p.pos)} · Nível ${p.lvl}${gl(p)}<span id="ar-${p.id}">${present.has(p.id)?" · chegada nº "+arr[p.id]:""}</span></small></span><input type="checkbox" ${present.has(p.id)?"checked":""} onchange="tg('${p.id}')"></label>`).join(""):`<p class="mut">${players.length?"Nenhum jogador neste filtro.":"Peça ao administrador para cadastrar jogadores."}</p>`}</section>
+  <section class="card"><h2>Convidado de hoje</h2>
+  <input id="gn" placeholder="Nome do convidado" maxlength="30">
+  <div class="row"><select id="gp" onchange="togG('#gg',this.value)">${posOpts(defPos())}</select><select id="gl">${lvlOpts(3)}</select></div>
+  ${groups().length?`<select id="gg" style="${exN(defPos())?"display:none":""}">${grpOpts("")}</select>`:""}
+  <button class="btn ghost" style="margin-top:0" onclick="addG()">Adicionar convidado</button>
+  ${guests.map((g,i)=>`<div class="item"><div><b>${esc(g.name)}</b><small>Convidado · ${esc(g.pos)} · Nível ${g.lvl}${gl(g)}</small></div><button class="ico" onclick="rmG(${i})" aria-label="Remover">✕</button></div>`).join("")}</section>
+  <section class="card"><h2>Como dividir</h2>
+  <label class="mut" for="ct">Número de times</label><input id="ct" type="number" inputmode="numeric" min="2" max="30" value="${qt.times}" oninput="qt.times=Math.max(2,+this.value||2)">
+  <label class="mut" for="cj">Jogadores por time</label><input id="cj" type="number" inputmode="numeric" min="1" max="30" value="${qt.jog}" oninput="qt.jog=Math.max(1,+this.value||1)">
+  <p class="mut" style="margin:0 0 8px;font-size:13px">Quem passar do total vai para as reservas, começando pelos grupos de menor prioridade e, dentro do grupo, por quem chegou por último. Posições com limite por time ficam garantidas.</p>
+  <button class="btn" onclick="sortear()">Sortear times</button>
+  ${err?`<p class="msg">${err}</p>`:""}</section>
+  ${result?viewR():""}`+upd();
+}
+function rmG(i){const g=guests.splice(i,1)[0];if(g)delete arr[g.id];if(!present.size&&!guests.length){seqC=0;arr={}}render()}
+function novoDia(){present=new Set();guests=[];arr={};seqC=0;result=null;sug=null;subOut=new Set();subIn="";note="";err="";askNew=false;render()}
+function upd(){setTimeout(()=>{const c=$("#cnt");if(c)c.textContent="("+(present.size+guests.length)+" presentes)"},0);return""}
+function tg(id){if(present.has(id)){present.delete(id);delete arr[id]}else{present.add(id);arr[id]=++seqC}if(!present.size&&!guests.length){seqC=0;arr={}}const s=$("#ar-"+id);if(s)s.textContent=present.has(id)?" · chegada nº "+arr[id]:"";upd()}
+function all_(v){if(v){visP().forEach(p=>{if(!present.has(p.id)){present.add(p.id);arr[p.id]=++seqC}})}else{visP().forEach(p=>{present.delete(p.id);delete arr[p.id]})}if(!present.size&&!guests.length){seqC=0;arr={}}render()}
+function addG(){
+  const name=$("#gn").value.trim();
+  if(!name){err="Digite o nome do convidado.";return render()}
+  const pos=$("#gp").value,g={id:uid(),name,pos,lvl:+$("#gl").value,grp:(exN(pos)||!groups().length)?"":$("#gg").value,guest:1};
+  guests.push(g);arr[g.id]=++seqC;err="";render();
+}
+function sortear(){
+  const all=[...players.filter(p=>present.has(p.id)),...guests];
+  if(all.length<2){err="Marque pelo menos 2 jogadores presentes.";result=null;return render()}
+  const k=Math.max(2,Math.min(qt.times,all.length)),out=new Set();let fixed=0;
+  cfg.pos.forEach(ps=>{if(ps.max>0){const g=all.filter(x=>x.pos===ps.n).sort(cmp);g.slice(k*ps.max).forEach(x=>out.add(x.id));fixed+=Math.min(g.length,k*ps.max)}});
+  const slots=Math.max(0,k*qt.jog-fixed);
+  all.filter(x=>!maxP(x.pos)).sort(cmp).slice(slots).forEach(x=>out.add(x.id));
+  const list=all.filter(x=>!out.has(x.id)),n=list.length;err="";
+  const cap=Math.ceil(n/k),order=[...new Set([...cfg.pos.map(p=>p.n),...list.map(x=>x.pos)])].sort((a,b)=>(maxP(a)>0?0:1)-(maxP(b)>0?0:1));
+  let best=null,bs=1e9;
+  for(let t=0;t<150;t++){
+    const teams=Array.from({length:k},()=>({p:[],sum:0,pc:{}}));
+    order.forEach(pos=>{
+      list.filter(x=>x.pos===pos).map(x=>({x,r:Math.random()})).sort((a,b)=>b.x.lvl-a.x.lvl||a.r-b.r).forEach(({x})=>{
+        let c=teams.filter(m=>m.p.length<cap&&(!maxP(pos)||(m.pc[pos]||0)<maxP(pos)));
+        if(!c.length)c=teams.filter(m=>m.p.length<cap);
+        const mp=Math.min(...c.map(m=>m.pc[pos]||0)),c2=c.filter(m=>(m.pc[pos]||0)==mp),ms=Math.min(...c2.map(m=>m.sum));
+        const c3=c2.filter(m=>m.sum==ms),m=c3[Math.floor(Math.random()*c3.length)];
+        m.p.push(x);m.sum+=x.lvl;m.pc[pos]=(m.pc[pos]||0)+1;
+      });
+    });
+    const av=teams.map(m=>m.sum/(m.p.length||1));
+    let sc=(Math.max(...av)-Math.min(...av))*10;
+    order.forEach(pos=>{const v=teams.map(m=>m.pc[pos]||0);sc+=Math.max(...v)-Math.min(...v)});
+    if(sc<bs){bs=sc;best=teams}
+  }
+  result=best;sug=null;subOut=new Set();subIn="";note="";render();
+  setTimeout(()=>{const r=$("#res");if(r)r.scrollIntoView({behavior:"smooth"})},50);
+}
+const inTeams=()=>new Set(result.flatMap(m=>m.p.map(x=>x.id)));
+const pool=()=>{const s=inTeams();return [...players,...guests].filter(x=>!s.has(x.id))};
+const isRes=x=>x.guest||present.has(x.id);
+const resList=()=>pool().filter(isRes);
+const avg=m=>(m.sum/(m.p.length||1)).toFixed(1).replace(".",",");
+const ord=m=>[...m.p].sort((a,b)=>ixP(a.pos)-ixP(b.pos)||b.lvl-a.lvl);
+const resv=()=>{const r=resList();return r.length?`<div class="team"><header style="background:var(--bd);color:var(--tx)">Reservas<span>${r.length}</span></header>${r.map(p=>`<div class="pl"><span>${esc(p.name)}${p.guest?" (convidado)":""}</span><small>${esc(p.pos)} · N${p.lvl}</small></div>`).join("")}</div>`:""};
+function viewR(){
+  return `<div id="res"><h2>Times sorteados</h2>`+result.map((m,i)=>`<div class="team"><header style="background:${COLORS[i%COLORS.length]}">Time ${i+1}<span>${m.p.length} jogadores · nível médio ${avg(m)}</span></header>${ord(m).map(p=>`<div class="pl"><span>${esc(p.name)}${p.guest?" (convidado)":""}</span><small>${esc(p.pos)} · N${p.lvl}</small></div>`).join("")}</div>`).join("")+
+  `${resv()}<button class="btn" onclick="sortear()">Sortear de novo</button><button class="btn ghost" onclick="copiar()">Copiar resultado</button><p class="mut" id="cp" style="text-align:center"></p></div>`;
+}
+function copiar(){
+  const t=result.map((m,i)=>`Time ${i+1} (nível médio ${avg(m)})\n`+ord(m).map(p=>`- ${p.name} (${p.pos}, N${p.lvl})`).join("\n")).join("\n\n")+(resList().length?"\n\nReservas\n"+resList().map(p=>`- ${p.name} (${p.pos}, N${p.lvl})`).join("\n"):"");
+  const ok=()=>{$("#cp").textContent="Resultado copiado."};
+  const fb=()=>{const a=document.createElement("textarea");a.value=t;document.body.appendChild(a);a.select();try{document.execCommand("copy");ok()}catch(e){$("#cp").textContent="Não foi possível copiar."}a.remove()};
+  try{navigator.clipboard.writeText(t).then(ok,fb)}catch(e){fb()}
+}
+const byId=id=>[...players,...guests].find(x=>x.id===id);
+const teamOf=id=>result.findIndex(m=>m.p.some(x=>x.id===id));
+function selIn(v){subIn=v;sug=null;note="";err="";render()}
+function tgo(id){subOut.has(id)?subOut.delete(id):subOut.add(id);sug=null;note="";err="";render()}
+function viewT(){
+  if(!result)return `<section class="card"><h2>Substituição</h2><p class="mut">Faça um sorteio na aba Sorteio para poder trocar jogadores.</p></section>`;
+  const pl=pool().filter(isRes).sort((a,b)=>a.name.localeCompare(b.name));
+  const opts=pl.map(x=>`<option value="${x.id}" ${x.id===subIn?"selected":""}>${esc(x.name)} (${esc(x.pos)}, N${x.lvl})</option>`).join("");
+  return `<section class="card"><h2>Quem entra</h2>${pl.length?`<select onchange="selIn(this.value)"><option value="">Escolha um jogador de fora</option>${opts}</select>`:`<p class="mut">Não há jogadores de fora com presença confirmada. Marque quem chegou na aba Sorteio ou adicione um convidado.</p>`}</section>
+  <section class="card"><h2>Quem pode sair</h2><p class="mut" style="margin:0 0 6px;font-size:13px">Marque os jogadores dos times que podem dar a vaga. Sai primeiro quem é do grupo de menor prioridade e, no mesmo grupo, quem chegou por último.</p>
+  ${result.map((m,i)=>ord(m).map(p=>`<label class="item"><span><span class="chip" style="background:${COLORS[i%COLORS.length]}">Time ${i+1}</span><b>${esc(p.name)}</b><small>${esc(p.pos)} · Nível ${p.lvl}${gl(p)} · chegada nº ${arr[p.id]||"-"}</small></span><input type="checkbox" ${subOut.has(p.id)?"checked":""} onchange="tgo('${p.id}')"></label>`).join("")).join("")}
+  <button class="btn" style="margin-top:10px" onclick="sugerir()">Sugerir quem sai</button>${err?`<p class="msg">${err}</p>`:""}${note?`<p class="ok">${esc(note)}</p>`:""}</section>${sug?viewSug():""}`;
+}
+function viewSug(){
+  const {inc,out,rank,ti}=sug,m=result[ti],f=v=>v.toFixed(1).replace(".",",");
+  const a0=m.sum/m.p.length,a1=(m.sum-out.lvl+inc.lvl)/m.p.length;
+  return `<section class="card"><h2>Sugestão</h2><p><b>Sai:</b> <span class="chip" style="background:${COLORS[ti%COLORS.length]}">Time ${ti+1}</span>${esc(out.name)} (${esc(out.pos)}, N${out.lvl}${gl(out)})<br><b>Entra:</b> ${esc(inc.name)} (${esc(inc.pos)}, N${inc.lvl}${gl(inc)})</p><p class="mut">Nível médio do Time ${ti+1}: ${f(a0)} → ${f(a1)}${out.pos!==inc.pos?`. Atenção: a posição muda de ${esc(out.pos)} para ${esc(inc.pos)}.`:"."}</p>${pr(out)<pr(inc)?`<p class="msg">Atenção: ${esc(out.name)} tem prioridade sobre ${esc(inc.name)}.</p>`:""}${rank.length?`<p class="mut">Próximos na fila de saída: ${rank.map(r=>esc(r.x.name)).join(", ")}.</p>`:""}<button class="btn" onclick="confirmar()">Confirmar troca</button></section>`;
+}
+function sugerir(){
+  note="";const inc=byId(subIn);
+  if(!inc){err="Escolha quem entra.";sug=null;return render()}
+  const outs=[...subOut].map(id=>({x:byId(id),ti:teamOf(id)})).filter(o=>o.x&&o.ti>=0);
+  if(!outs.length){err="Marque pelo menos um jogador que pode sair.";sug=null;return render()}
+  const cnt=(ti,n)=>result[ti].p.filter(p=>p.pos===n).length;
+  const el=outs.filter(o=>o.x.pos===inc.pos||(!maxP(o.x.pos)&&(!maxP(inc.pos)||cnt(o.ti,inc.pos)<maxP(inc.pos))));
+  if(!el.length){err="Esses jogadores não podem ser trocados por "+inc.name+" (posição com limite por time). Marque jogadores da mesma posição.";sug=null;return render()}
+  el.sort((a,b)=>cmp(b.x,a.x));
+  err="";sug={inc,out:el[0].x,ti:el[0].ti,rank:el.slice(1)};render();
+}
+function confirmar(){
+  const {inc,out,ti}=sug,m=result[ti];
+  m.p=m.p.map(x=>x.id===out.id?inc:x);m.sum=m.p.reduce((s,x)=>s+x.lvl,0);
+  if(!inc.guest)present.add(inc.id);
+  if(!arr[inc.id])arr[inc.id]=++seqC;
+  note=inc.name+" entrou no Time "+(ti+1)+" no lugar de "+out.name+".";
+  sug=null;subOut=new Set();subIn="";err="";render();
+}
+function viewA(){
+  const st=DB?(ADM?"Compartilhado entre aparelhos · você é administrador":"Compartilhado · somente leitura (peça acesso de Editor ao dono)"):"Modo local · dados só neste aparelho";
+  const d=ADM?"":"disabled";
+  return `<section class="card"><h2>Administração</h2><p class="mut">${st}</p>
+  <label class="mut" for="tp">Tipo da pelada</label>
+  <select id="tp" ${d} onchange="setTipo(this.value)">${Object.keys(TIPOS).map(k=>`<option value="${k}" ${k==cfg.tipo?"selected":""}>${TNOMES[k]}</option>`).join("")}</select>
+  <label class="mut" for="md">Modelo de esporte</label>
+  <select id="md" ${d}>${Object.keys(MODELOS).map(k=>`<option>${k}</option>`).join("")}</select>
+  <button class="btn ghost" ${d} onclick="aplicarModelo()">Aplicar modelo de posições</button>
+  ${err?`<p class="msg">${err}</p>`:""}</section>
+  <section class="card"><h2>Posições</h2><p class="mut" style="margin:0 0 6px;font-size:13px">Nome, máximo por time (0 = sem limite) e se a posição fica fora da regra de idade.</p>
+  ${cfg.pos.map((p,i)=>`<div class="item" style="flex-wrap:wrap"><input value="${esc(p.n)}" ${d} maxlength="20" onchange="renPos(${i},this.value)" style="flex:2;margin:0" aria-label="Nome da posição"><input type="number" min="0" max="9" value="${p.max}" ${d} onchange="setPos(${i},'max',Math.max(0,+this.value||0))" style="flex:1;margin:0" aria-label="Máximo por time"><label style="display:flex;gap:6px;align-items:center"><input type="checkbox" ${p.ex?"checked":""} ${d} onchange="setPos(${i},'ex',this.checked)">Sem idade</label><button class="ico" ${d} onclick="delPos(${i})" aria-label="Excluir posição">🗑</button></div>`).join("")}
+  ${ADM?`<input id="np" placeholder="Nova posição" maxlength="20" style="margin-top:10px"><button class="btn" onclick="addPos()">Adicionar posição</button>`:""}</section>`;
+}
+async function saveC(){err=err||"";await persist("c");render()}
+function setTipo(v){cfg.tipo=v;err="";saveC()}
+function aplicarModelo(){cfg.pos=mk(MODELOS[$("#md").value]);err="";saveC()}
+function setPos(i,k,v){cfg.pos[i][k]=v;err="";saveC()}
+async function renPos(i,v){
+  v=v.trim();const old=cfg.pos[i].n;
+  if(!v||(v!==old&&cfg.pos.some(p=>p.n===v))){err="Nome vazio ou já usado por outra posição.";return render()}
+  cfg.pos[i].n=v;players.forEach(p=>{if(p.pos===old)p.pos=v});err="";await persist("p");saveC();
+}
+function delPos(i){
+  if(players.some(p=>p.pos===cfg.pos[i].n)){err="Há jogadores nessa posição. Mude a posição deles antes de excluir.";return render()}
+  if(cfg.pos.length<2){err="Mantenha pelo menos uma posição.";return render()}
+  cfg.pos.splice(i,1);err="";saveC();
+}
+function addPos(){
+  const v=$("#np").value.trim();
+  if(!v||cfg.pos.some(p=>p.n===v)){err="Digite um nome novo para a posição.";return render()}
+  cfg.pos.push({n:v,max:0,ex:false});err="";saveC();
+}
+</script></body></html>
