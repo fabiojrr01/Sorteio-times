@@ -36,13 +36,15 @@ input[type=checkbox]{width:24px;height:24px;margin:0;accent-color:var(--tx)}
 #ps,#gp{background:#f2c14e;color:#14213d;font-weight:700;border-color:#f2c14e}#ps option,#gp option{background:#fff;color:#14213d}
 .gh{margin:14px 0 6px;padding:6px 10px;border-radius:8px;background:#f2c14e;color:#14213d;font-size:14px;font-weight:800}
 .chip{display:inline-block;padding:1px 8px;border-radius:8px;font-size:12px;font-weight:800;color:#14213d;margin-right:6px}.ok{font-weight:700;margin:8px 0 0}
-.banner{border:0;background:#14213d;color:#fff;justify-content:flex-start;gap:14px;padding:18px;text-align:left}.banner b{display:block;font-size:32px;font-weight:900;letter-spacing:.05em;line-height:1}.banner span{color:#f2c14e;font-weight:700;letter-spacing:.22em;font-size:13px;text-transform:uppercase}.banner i{width:6px;align-self:stretch;background:#f2c14e;border-radius:3px}
+.banner{border:0;background:#14213d;color:#fff;justify-content:flex-start;gap:14px;padding:18px;text-align:left}.banner b{display:block;margin-top:4px;font-size:26px;font-weight:900;letter-spacing:.05em;line-height:1}.banner span{color:#f2c14e;font-weight:700;letter-spacing:.22em;font-size:13px;text-transform:uppercase}.banner i{width:6px;align-self:stretch;background:#f2c14e;border-radius:3px}
+.banner p{margin:8px 0 0;line-height:1.7}.banner a{color:#fff;text-decoration:underline}.banner small{display:block;margin-top:6px;color:#c9d1e6;font-size:12px}
+.banner.spons{background:#fff;padding:10px;min-height:96px;justify-content:center;flex-direction:column;gap:4px;border:1px solid var(--bd)}.spons a{display:block;width:100%}.spons img{display:block;max-width:100%;max-height:150px;margin:0 auto;object-fit:contain}.banner.spons small{margin:0;text-align:center;color:#667089}.slide{animation:fi .5s}@keyframes fi{from{opacity:0}to{opacity:1}}
 .msg{color:var(--dg);margin:8px 0 0;font-weight:600}
 </style></head><body><main>
 <h1>⚽ Sorteio de Times</h1>
 <div class="tabs"><button class="tab" data-t="j" onclick="go('j')">Jogadores</button><button class="tab" data-t="s" onclick="go('s')">Sorteio</button><button class="tab" data-t="t" onclick="go('t')">Substit.</button><button class="tab" data-t="a" onclick="go('a')">Admin</button></div>
 <div id="app"></div>
-<div class="ad banner" id="ad-slot"><i></i><div><b>ANSEF</b><span>Paraíba</span></div></div>
+<div class="ad banner" id="ad-slot"><i></i><div><span>Desenvolvido por</span><b>Fabio Soares</b><p><a href="tel:+5583981134183">(83) 98113-4183</a><br><a href="mailto:fabiojuniorfv@hotmail.com">fabiojuniorfv@hotmail.com</a></p><small>Novembro de 2026</small></div></div>
 </main>
 <script>
 window.addEventListener("unhandledrejection",e=>{msg="Erro inesperado: "+((e.reason&&e.reason.message)||e.reason);try{render()}catch(x){}});
@@ -63,7 +65,7 @@ const MODELOS={Futebol:[["Goleiro",1,1],["Defesa",0,0],["Meio",0,0],["Ataque",0,
 const mk=a=>a.map(([n,max,ex])=>({n,max,ex:!!ex}));
 const COLORS=["#f4a259","#6cb8f0","#f2d64e","#f08bb4","#8fd694","#b79af0","#f08a7a","#7fd6d0"];
 const $=s=>document.querySelector(s);
-let FB=null,USER=null,ROLE="",OWNER=false,fbErr=false,acesso=[],unsub=[],peladas=[],pid="",listOk=false,undados=[],bkpTxt="",bkpMsg="",ADM=false,synced=false,cfg={tipo:"misto",pos:mk(MODELOS.Futebol)},players=[],present=new Set(),guests=[],tab="j",editId=null,qt={times:2,jog:5},result=null,err="",arr={},seqC=0,subIn="",subOut=new Set(),sug=null,note="",flt="todos",msg="",draft=null,pend=null,okMsg="",delAsk=null,askNew=false;
+let FB=null,USER=null,ROLE="",OWNER=false,fbErr=false,acesso=[],unsub=[],patro={itens:[],seg:6},dp={nome:"",link:""},bIdx=0,bTimer=null,peladas=[],pid="",listOk=false,undados=[],bkpTxt="",bkpMsg="",ADM=false,synced=false,cfg={tipo:"misto",pos:mk(MODELOS.Futebol)},players=[],present=new Set(),guests=[],tab="j",editId=null,qt={times:2,jog:5},result=null,err="",arr={},seqC=0,subIn="",subOut=new Set(),sug=null,note="",flt="todos",msg="",draft=null,pend=null,okMsg="",delAsk=null,askNew=false;
 const LS=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem(k));localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const uid=()=>"p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
@@ -147,10 +149,75 @@ async function novaPelada(){
   }catch(e){err="Não foi possível criar a pelada.";return render()}
   err="";escolher(id);
 }
+const CREDITO='<i></i><div class="slide"><span>Desenvolvido por</span><b>Fabio Soares</b><p><a href="tel:+5583981134183">(83) 98113-4183</a><br><a href="mailto:fabiojuniorfv@hotmail.com">fabiojuniorfv@hotmail.com</a></p><small>Novembro de 2026</small></div>';
+const lk=u=>/^https?:\/\//i.test(u||"")?u:"";
+function bannerRender(){
+  const el=$("#ad-slot");if(!el)return;
+  const sl=[...patro.itens,null];if(bIdx>=sl.length)bIdx=0;
+  const p=sl[bIdx];
+  if(!p){el.className="ad banner";el.innerHTML=CREDITO;return}
+  const img=`<img src="${p.img}" alt="${esc(p.nome)}">`;
+  el.className="ad banner spons";
+  el.innerHTML=`<div class="slide" style="width:100%">${lk(p.link)?`<a href="${esc(lk(p.link))}" target="_blank" rel="noopener">${img}</a>`:img}<small>Patrocinador · ${esc(p.nome)}</small></div>`;
+}
+function bannerStart(){
+  clearInterval(bTimer);bIdx=0;bannerRender();
+  if(patro.itens.length)bTimer=setInterval(()=>{bIdx=(bIdx+1)%(patro.itens.length+1);bannerRender()},Math.min(30,Math.max(3,+patro.seg||6))*1000);
+}
+function secPatro(){
+  if(!FIREBASE_CONFIG||!isDono())return "";
+  return `<section class="card"><h2>Patrocinadores do banner</h2>
+  <p class="mut" style="margin:0 0 6px;font-size:13px">Aparecem no rodapé de todas as peladas, revezando com o seu crédito. Máximo de 8. A imagem é reduzida automaticamente.</p>
+  ${patro.itens.map(p=>`<div class="item"><span style="display:flex;gap:10px;align-items:center"><img src="${p.img}" alt="" style="width:64px;height:32px;object-fit:contain;background:#fff;border-radius:6px"><span><b>${esc(p.nome)}</b><small>${esc(p.link||"sem link")}</small></span></span><button class="ico" onclick="delPatro('${p.id}')" aria-label="Remover patrocinador">🗑</button></div>`).join("")||`<p class="mut">Nenhum patrocinador ainda.</p>`}
+  <input id="pn" placeholder="Nome do patrocinador" maxlength="40" value="${esc(dp.nome)}" style="margin-top:10px">
+  <input id="pl" placeholder="Link ao tocar (opcional)" maxlength="300" value="${esc(dp.link)}">
+  <input id="pf" type="file" accept="image/*">
+  <button class="btn" onclick="addPatro()">Adicionar patrocinador</button>
+  <label class="mut" for="pseg" style="display:block;margin-top:10px">Segundos por anúncio (3 a 30)</label>
+  <input id="pseg" type="number" min="3" max="30" value="${patro.seg||6}" onchange="setSeg(this.value)">
+  ${err?`<p class="msg">${esc(err)}</p>`:""}</section>`;
+}
+function reduzir(file){return new Promise((res,rej)=>{
+  const r=new FileReader();r.onerror=rej;
+  r.onload=()=>{const im=new Image();im.onerror=rej;
+    im.onload=()=>{
+      const k=Math.min(1,900/im.width,300/im.height),w=Math.max(1,Math.round(im.width*k)),h=Math.max(1,Math.round(im.height*k));
+      const c=document.createElement("canvas");c.width=w;c.height=h;
+      const x=c.getContext("2d");x.fillStyle="#fff";x.fillRect(0,0,w,h);x.drawImage(im,0,0,w,h);
+      let q=.85,d=c.toDataURL("image/jpeg",q);
+      while(d.length>150000&&q>.4){q-=.1;d=c.toDataURL("image/jpeg",q)}
+      d.length>200000?rej(new Error("grande")):res(d);
+    };im.src=r.result};
+  r.readAsDataURL(file);
+})}
+async function salvarPatro(){
+  wn++;
+  wq=wq.then(async()=>{try{await FB.save("patrocinio/lista",cl(patro))}catch(e){err="Não foi possível salvar os patrocinadores."}finally{wn--}});
+  await wq;bannerStart();
+}
+async function addPatro(){
+  const nome=$("#pn").value.trim(),f=$("#pf").files[0];let link=$("#pl").value.trim();dp={nome,link};
+  if(!nome){err="Digite o nome do patrocinador.";return render()}
+  if(!f){err="Escolha a imagem do banner.";return render()}
+  if(patro.itens.length>=8){err="Máximo de 8 patrocinadores.";return render()}
+  if(link&&!/^https?:\/\//i.test(link))link="https://"+link;
+  let img;try{img=await reduzir(f)}catch(e){err="Não foi possível usar essa imagem.";return render()}
+  patro.itens.push({id:uid(),nome,link,img});dp={nome:"",link:""};err="";await salvarPatro();render();
+}
+async function delPatro(id){patro.itens=patro.itens.filter(p=>p.id!==id);err="";await salvarPatro();render()}
+async function setSeg(v){patro.seg=Math.min(30,Math.max(3,Math.round(+v)||6));await salvarPatro();render()}
+function watchPatro(){
+  FB.watch("patrocinio/lista",d=>{
+    if(wn)return;
+    patro={itens:((d&&d.itens)||[]).filter(p=>/^data:image\//.test(p.img||"")),seg:(d&&d.seg)||6};
+    bannerStart();
+  },()=>{});
+}
 async function boot(){
   if(!FIREBASE_CONFIG){startLocal();return}
   render();
   try{FB=await fbInit()}catch(e){fbErr=true;render();return}
+  watchPatro();
   FB.onUser(u=>{USER=u;err="";subs();render()});
 }
 async function fbLogin(){try{await FB.login()}catch(e){err="Não foi possível entrar: "+(e.code||e.message);render()}}
@@ -372,7 +439,7 @@ function confirmar(){
   note=inc.name+" entrou no Time "+(ti+1)+" no lugar de "+out.name+".";
   sug=null;subOut=new Set();subIn="";err="";render();
 }
-function viewA(){return viewA0()+secAcesso()}
+function viewA(){return viewA0()+secAcesso()+secPatro()}
 function viewA0(){
   const st=FIREBASE_CONFIG?(isDono()?"Compartilhado · você é o criador do app":(OWNER?"Compartilhado · você é administrador desta pelada":"Somente leitura")):"Modo local · dados só neste aparelho";
   const d=OWNER?"":"disabled";
