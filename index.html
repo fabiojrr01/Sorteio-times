@@ -63,7 +63,7 @@ const MODELOS={Futebol:[["Goleiro",1,1],["Defesa",0,0],["Meio",0,0],["Ataque",0,
 const mk=a=>a.map(([n,max,ex])=>({n,max,ex:!!ex}));
 const COLORS=["#f4a259","#6cb8f0","#f2d64e","#f08bb4","#8fd694","#b79af0","#f08a7a","#7fd6d0"];
 const $=s=>document.querySelector(s);
-let FB=null,USER=null,ROLE="",OWNER=false,fbErr=false,acesso=[],unsub=[],bkpTxt="",bkpMsg="",ADM=false,synced=false,cfg={tipo:"misto",pos:mk(MODELOS.Futebol)},players=[],present=new Set(),guests=[],tab="j",editId=null,qt={times:2,jog:5},result=null,err="",arr={},seqC=0,subIn="",subOut=new Set(),sug=null,note="",flt="todos",msg="",draft=null,pend=null,okMsg="",delAsk=null,askNew=false;
+let FB=null,USER=null,ROLE="",OWNER=false,fbErr=false,acesso=[],unsub=[],peladas=[],pid="",listOk=false,undados=[],bkpTxt="",bkpMsg="",ADM=false,synced=false,cfg={tipo:"misto",pos:mk(MODELOS.Futebol)},players=[],present=new Set(),guests=[],tab="j",editId=null,qt={times:2,jog:5},result=null,err="",arr={},seqC=0,subIn="",subOut=new Set(),sug=null,note="",flt="todos",msg="",draft=null,pend=null,okMsg="",delAsk=null,askNew=false;
 const LS=(k,v)=>{try{if(v===undefined)return JSON.parse(localStorage.getItem(k));localStorage.setItem(k,JSON.stringify(v))}catch(e){return null}};
 const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const uid=()=>"p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
@@ -86,7 +86,11 @@ const cl=o=>JSON.parse(JSON.stringify(o));
 function persist(w){
   if(!FIREBASE_CONFIG){LS(w==="c"?"config":"jogadores",w==="c"?cfg:players);return Promise.resolve()}
   wn++;
-  wq=wq.then(async()=>{try{if(w==="c")await FB.save("app/config",cl(cfg));else if(w==="a")await FB.save("acesso/lista",{emails:cl(acesso)});else await FB.save("app/players",{list:cl(players)})}catch(e){err="Não foi possível salvar. Verifique seu acesso."}finally{wn--}});
+  wq=wq.then(async()=>{try{
+    if(w==="c")await FB.save("peladas/"+pid+"/dados/config",cl(cfg));
+    else if(w==="a"){const q=cl(pel());delete q.id;await FB.save("peladas/"+pid,q)}
+    else await FB.save("peladas/"+pid+"/dados/players",{list:cl(players)})
+  }catch(e){err="Não foi possível salvar. Verifique seu acesso."}finally{wn--}});
   return wq;
 }
 async function fbInit(){
@@ -99,18 +103,49 @@ async function fbInit(){
     login:()=>au.signInWithPopup(auth,new au.GoogleAuthProvider()),
     logout:()=>au.signOut(auth),
     watch:(p,ok,fail)=>fs.onSnapshot(fs.doc(db,p),s=>ok(s.exists()?s.data():null),e=>fail(e)),
+    watchList:(email,todos,ok,fail)=>{const c=fs.collection(db,"peladas");const q=todos?c:fs.query(c,fs.where("membros","array-contains",email));return fs.onSnapshot(q,s=>ok(s.docs.map(d=>({id:d.id,...d.data()}))),e=>fail(e))},
     save:(p,d)=>fs.setDoc(fs.doc(db,p),d)
   };
 }
 function startLocal(){const c=LS("config");if(c&&c.pos)cfg=c;players=LS("jogadores")||[];ADM=OWNER=true;synced=true;render()}
+const isDono=()=>!!USER&&USER.email===DONO;
+const pel=()=>peladas.find(p=>p.id===pid)||null;
+const rolDe=p=>{if(!USER)return "";if(isDono())return "admin";const e=USER.email;return (p.admins||[]).includes(e)?"admin":(p.editores||[]).includes(e)?"editor":(p.viewers||[]).includes(e)?"viewer":""};
+const rolNome=r=>({admin:"Administrador",editor:"Editor",viewer:"Visualizador"}[r]||"");
+function setPerms(){if(!FIREBASE_CONFIG)return;const p=pel(),r=p?rolDe(p):"";ADM=r==="admin"||r==="editor";OWNER=r==="admin"}
 function subs(){
-  unsub.forEach(u=>{try{u()}catch(e){}});unsub=[];synced=false;ROLE="";ADM=OWNER=false;
+  unsub.forEach(u=>{try{u()}catch(e){}});unsub=[];undados.forEach(u=>{try{u()}catch(e){}});undados=[];
+  peladas=[];pid="";listOk=false;synced=false;ADM=OWNER=false;players=[];
   if(!USER)return;
-  if(USER.email===DONO){ROLE="dono";ADM=OWNER=true}
-  const sem=()=>{if(ROLE!=="dono"){ROLE="sem";ADM=OWNER=false}render()};
-  unsub.push(FB.watch("app/players",d=>{if(!ROLE){ROLE="liberado";ADM=true}if(!wn)players=cl((d&&d.list)||[]);synced=true;msg="";render()},sem));
-  unsub.push(FB.watch("app/config",d=>{if(d&&!wn)cfg=Object.assign({tipo:"misto",pos:cfg.pos},cl(d));render()},()=>{}));
-  unsub.push(FB.watch("acesso/lista",d=>{if(!wn)acesso=cl((d&&d.emails)||[]);render()},()=>{}));
+  unsub.push(FB.watchList(USER.email,isDono(),l=>{
+    peladas=cl(l).sort((a,b)=>(a.nome||"").localeCompare(b.nome||""));listOk=true;
+    if(pid&&!pel()){pid="";subDados()}
+    if(!pid){const ult=LS("ultimaPelada");if(peladas.length===1)pid=peladas[0].id;else if(ult&&peladas.some(p=>p.id===ult))pid=ult;if(pid)subDados()}
+    setPerms();render();
+  },()=>{listOk=true;render()}));
+}
+function subDados(){
+  undados.forEach(u=>{try{u()}catch(e){}});undados=[];
+  players=[];synced=false;present=new Set();guests=[];arr={};seqC=0;result=null;sug=null;subOut=new Set();subIn="";tab="j";
+  cfg={tipo:"misto",pos:mk(MODELOS.Futebol)};
+  if(pid){LS("ultimaPelada",pid);
+    undados.push(FB.watch("peladas/"+pid+"/dados/players",d=>{if(!wn)players=cl((d&&d.list)||[]);synced=true;msg="";render()},()=>{synced=true;render()}));
+    undados.push(FB.watch("peladas/"+pid+"/dados/config",d=>{if(d&&!wn)cfg=Object.assign({tipo:"misto",pos:cfg.pos},cl(d));render()},()=>{}));
+  }
+  setPerms();
+}
+function escolher(id){pid=id;subDados();render()}
+function trocar(){pid="";LS("ultimaPelada","");subDados();render()}
+async function novaPelada(){
+  const nome=$("#np2").value.trim();
+  if(!nome){err="Digite o nome da pelada.";return render()}
+  const id="p"+Date.now().toString(36)+Math.random().toString(36).slice(2,6);
+  try{
+    await FB.save("peladas/"+id,{nome,admins:[],editores:[],viewers:[],membros:[]});
+    await FB.save("peladas/"+id+"/dados/config",{tipo:"misto",pos:cl(mk(MODELOS.Futebol))});
+    await FB.save("peladas/"+id+"/dados/players",{list:[]});
+  }catch(e){err="Não foi possível criar a pelada.";return render()}
+  err="";escolher(id);
 }
 async function boot(){
   if(!FIREBASE_CONFIG){startLocal();return}
@@ -120,29 +155,43 @@ async function boot(){
 }
 async function fbLogin(){try{await FB.login()}catch(e){err="Não foi possível entrar: "+(e.code||e.message);render()}}
 function fbLogout(){FB.logout()}
+function telaPeladas(){
+  return `<section class="card"><h2>Minhas peladas</h2>
+  ${peladas.map(p=>`<button class="btn ghost" style="margin:0 0 8px;text-align:left" onclick="escolher('${p.id}')"><b>${esc(p.nome||"Pelada")}</b><br><span class="mut" style="font-weight:500">${isDono()?"Criador":rolNome(rolDe(p))}</span></button>`).join("")||`<p class="mut">Nenhuma pelada ainda.</p>`}
+  ${isDono()?`<h2 style="margin-top:14px">Nova pelada</h2><input id="np2" placeholder="Nome da pelada" maxlength="40"><button class="btn" onclick="novaPelada()">Criar pelada</button>${err?`<p class="msg">${esc(err)}</p>`:""}`:""}
+  <p class="mut" style="font-size:13px;margin:12px 0 0">${esc(USER.email)} · <a href="#" onclick="fbLogout();return false" style="color:inherit">Sair</a></p></section>`;
+}
 function gate(){
   if(!FIREBASE_CONFIG)return "";
   if(fbErr)return `<section class="card"><h2>Sem conexão</h2><p class="mut">Não foi possível carregar o serviço de acesso. Verifique a internet.</p><button class="btn" onclick="location.reload()">Tentar de novo</button></section>`;
   if(!FB)return `<p class="mut">Carregando...</p>`;
-  if(!USER)return `<section class="card"><h2>Entrar</h2><p class="mut">Este app é de acesso restrito. Entre com a conta Google que o criador liberou.</p><button class="btn" onclick="fbLogin()">Entrar com Google</button>${err?`<p class="msg">${esc(err)}</p>`:""}</section>`;
-  if(ROLE==="sem")return `<section class="card"><h2>Sem acesso</h2><p class="mut">O e-mail ${esc(USER.email)} ainda não tem acesso. Envie esse e-mail ao criador do app.</p><button class="btn ghost" onclick="fbLogout()">Sair e usar outra conta</button></section>`;
-  if(!ROLE)return `<p class="mut">Verificando acesso...</p>`;
+  if(!USER)return `<section class="card"><h2>Entrar</h2><p class="mut">Este app é de acesso restrito. Entre com a conta Google que o administrador da sua pelada liberou.</p><button class="btn" onclick="fbLogin()">Entrar com Google</button>${err?`<p class="msg">${esc(err)}</p>`:""}</section>`;
+  if(!listOk)return `<p class="mut">Carregando suas peladas...</p>`;
+  if(!peladas.length&&!isDono())return `<section class="card"><h2>Sem acesso</h2><p class="mut">O e-mail ${esc(USER.email)} ainda não está em nenhuma pelada. Envie esse e-mail ao administrador da sua pelada.</p><button class="btn ghost" onclick="fbLogout()">Sair e usar outra conta</button></section>`;
+  if(!pid)return telaPeladas();
   return "";
 }
 function secAcesso(){
-  if(!FIREBASE_CONFIG||!OWNER)return "";
-  return `<section class="card"><h2>Acessos</h2><p class="mut" style="margin:0 0 6px;font-size:13px">Quem entra com a conta Google destes e-mails pode ver e editar os jogadores e usar o sorteio. Só você vê a aba Admin.</p>
-  ${acesso.map((e,i)=>`<div class="item"><span>${esc(e)}</span><button class="ico" onclick="delAcesso(${i})" aria-label="Remover acesso">🗑</button></div>`).join("")||`<p class="mut">Ninguém além de você.</p>`}
+  const p=pel();
+  if(!FIREBASE_CONFIG||!OWNER||!p)return "";
+  const L=[...(p.admins||[]).map(e=>[e,"Administrador"]),...(p.editores||[]).map(e=>[e,"Editor"]),...(p.viewers||[]).map(e=>[e,"Visualizador"])];
+  return `<section class="card"><h2>Pessoas desta pelada</h2>
+  <label class="mut" for="nmp">Nome da pelada</label><input id="nmp" maxlength="40" value="${esc(p.nome||"")}" onchange="renPelada(this.value)">
+  <p class="mut" style="margin:0 0 6px;font-size:13px">Administrador: configura a pelada e libera pessoas. Editor: cadastra jogadores e sorteia. Visualizador: vê o cadastro e sorteia.</p>
+  ${L.map(([e,r])=>`<div class="item"><span>${esc(e)}<small>${r}</small></span><button class="ico" onclick="delAcesso('${esc(e)}')" aria-label="Remover acesso">🗑</button></div>`).join("")||`<p class="mut">Ninguém ainda.</p>`}
   <input id="ne" type="email" placeholder="E-mail Google da pessoa" style="margin-top:10px">
+  <select id="nr"><option value="admins">Administrador</option><option value="editores" selected>Editor</option><option value="viewers">Visualizador</option></select>
   <button class="btn" onclick="addAcesso()">Dar acesso</button>${err?`<p class="msg">${esc(err)}</p>`:""}</section>`;
 }
 async function addAcesso(){
-  const e=$("#ne").value.trim().toLowerCase();
-  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(e)){err="Digite um e-mail válido.";return render()}
-  if(e===DONO||acesso.includes(e)){err="Esse e-mail já tem acesso.";return render()}
-  acesso.push(e);err="";await persist("a");render();
+  const e=$("#ne").value.trim().toLowerCase(),r=$("#nr").value,p=pel();
+  if(!p)return;
+  if(!/^[^@\s'"<>]+@[^@\s'"<>]+\.[^@\s'"<>]+$/.test(e)){err="Digite um e-mail válido.";return render()}
+  if((p.membros||[]).includes(e)){err="Esse e-mail já está nesta pelada.";return render()}
+  p[r]=[...(p[r]||[]),e];p.membros=[...(p.membros||[]),e];err="";await persist("a");render();
 }
-async function delAcesso(i){acesso.splice(i,1);err="";await persist("a");render()}
+async function delAcesso(e){const p=pel();if(!p)return;["admins","editores","viewers","membros"].forEach(k=>{p[k]=(p[k]||[]).filter(x=>x!==e)});err="";await persist("a");render()}
+async function renPelada(v){const p=pel();v=v.trim();if(!p||!v)return;p.nome=v.slice(0,40);await persist("a");render()}
 const bkp=()=>ADM?`<section class="card"><h2>Backup da lista</h2><p class="mut" style="margin:0 0 8px;font-size:13px">Copie a lista para guardar ou levar a outro aparelho. Para importar, cole aqui o texto copiado. Jogadores que já existem (mesmo nome e posição) não são repetidos.</p>
   <button class="btn ghost" style="margin-top:0" onclick="expor()">Copiar lista de jogadores</button>
   <textarea id="bk" rows="4" placeholder="Cole aqui o texto da lista para importar" style="width:100%;margin:8px 0;padding:12px;border:1px solid var(--bd);border-radius:10px;background:var(--bg);color:var(--tx);font:13px monospace">${esc(bkpTxt)}</textarea>
@@ -168,7 +217,7 @@ function go(t){tab=t;err="";msg="";okMsg="";askNew=false;pend=null;draft=null;de
 function render(){
   if(tab==="a"&&!OWNER)tab="j";
   const g=gate(),v={j:viewJ,s:viewS,t:viewT,a:viewA}[tab];
-  const who=FIREBASE_CONFIG&&USER&&!g?`<p class="mut" style="margin:0 0 10px;font-size:13px">${esc(USER.email)} · ${ROLE==="dono"?"criador":"com acesso"} · <a href="#" onclick="fbLogout();return false" style="color:inherit">Sair</a></p>`:"";
+  const pp=pel(),who=FIREBASE_CONFIG&&USER&&!g?`<p class="mut" style="margin:0 0 10px;font-size:13px">${esc(USER.email)} · ${isDono()?"criador":rolNome(pp?rolDe(pp):"")} · <b>${esc(pp?pp.nome:"")}</b> · <a href="#" onclick="trocar();return false" style="color:inherit">Trocar pelada</a> · <a href="#" onclick="fbLogout();return false" style="color:inherit">Sair</a></p>`:"";
   $("#app").innerHTML=g||((msg?`<p class="msg">${msg}</p>`:"")+who+v());
   document.querySelector(".tabs").style.display=g?"none":"";
   const ta=document.querySelector('.tab[data-t="a"]');if(ta)ta.style.display=OWNER?"":"none";
@@ -187,7 +236,7 @@ function viewJ(){
   <p class="mut" style="margin:0 0 8px;font-size:13px">Nível 1 = pouca habilidade, nível 5 = muita habilidade.</p>
   ${pend?`<div class="msg" style="margin:0 0 10px">Já existe ${esc(pend.dup.name)} (${esc(pend.dup.pos)}, nível ${pend.dup.lvl}${gl(pend.dup)}) ${pend.same?"com o mesmo cadastro":"com dados diferentes"}. Deseja cadastrar mesmo assim como ${esc(pend.nome)}?</div><button class="btn" onclick="dupSim()">Sim, cadastrar como ${esc(pend.nome)}</button><button class="btn ghost" onclick="pend=null;render()">Não, voltar</button>`:`<button class="btn" onclick="salvarJ()">${editId?"Salvar alterações":"Adicionar jogador"}</button>`}
   ${editId?`<button class="btn ghost" onclick="editId=null;render()">Cancelar</button>`:""}
-  ${err?`<p class="msg">${err}</p>`:""}${okMsg?`<p class="ok" style="color:#1f9d55">${esc(okMsg)}</p>`:""}</section>`:`<section class="card"><p class="mut">Somente administradores editam o cadastro.</p></section>`;
+  ${err?`<p class="msg">${err}</p>`:""}${okMsg?`<p class="ok" style="color:#1f9d55">${esc(okMsg)}</p>`:""}</section>`:`<section class="card"><p class="mut">Seu acesso é só para ver os jogadores e sortear.</p></section>`;
   return form+`<section class="card"><h2>Jogadores cadastrados (${players.length})</h2>
   ${imp?`<button class="btn ghost" onclick="importar()">Importar ${LS("jogadores").length} jogadores deste aparelho</button>`:""}
   ${sorted.length?names.map(pos=>{const g=sorted.filter(p=>p.pos===pos);return g.length?`<h3 class="gh">${esc(pos)} (${g.length})</h3>`+g.map(p=>`<div class="item"><div><b>${esc(p.name)}</b><small>Nível ${p.lvl}${gl(p)}</small></div>${ADM?(delAsk===p.id?`<div><button class="ico" style="font-size:14px;font-weight:800;color:var(--dg)" onclick="delJ('${p.id}')">Sim, excluir</button><button class="ico" style="font-size:14px" onclick="delAsk=null;render()">Não</button></div>`:`<div><button class="ico" onclick="editJ('${p.id}')" aria-label="Editar">✎</button><button class="ico" onclick="delAsk='${p.id}';render()" aria-label="Excluir">🗑</button></div>`):""}</div>`).join(""):""}).join(""):`<p class="mut">${synced?"Nenhum jogador ainda.":"Carregando..."}</p>`}</section>`+bkp();
@@ -325,7 +374,7 @@ function confirmar(){
 }
 function viewA(){return viewA0()+secAcesso()}
 function viewA0(){
-  const st=FIREBASE_CONFIG?(OWNER?"Compartilhado · você é o criador":"Somente leitura"):"Modo local · dados só neste aparelho";
+  const st=FIREBASE_CONFIG?(isDono()?"Compartilhado · você é o criador do app":(OWNER?"Compartilhado · você é administrador desta pelada":"Somente leitura")):"Modo local · dados só neste aparelho";
   const d=OWNER?"":"disabled";
   return `<section class="card"><h2>Administração</h2><p class="mut">${st}</p>
   <label class="mut" for="tp">Tipo da pelada</label>
